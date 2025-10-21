@@ -1,103 +1,132 @@
-import Image from "next/image";
+"use client";
+
+
+import { useMemo, useState } from "react";
+import Header from "@/components/Header";
+import EditorPane from "@/components/EditorPane";
+import OutputPane from "@/components/OutputPane";
+import type { Suggestion } from "@/components/types";
+import { useChromeAI } from "@/features/ai/useChromeAI";
+import { useTextHistory } from "@/features/editor/useTextHistory";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const history = useTextHistory("");
+  const text = history.present;
+  const [output, setOutput] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const systemPrompt = "You are a concise prompt-crafting assistant. Rewrite the input into a single, clear, actionable prompt without extra commentary.";
+  const chromeAI = useChromeAI(systemPrompt);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const suggestions: Suggestion[] = [
+    {
+      id: "grammar1",
+      type: "grammar",
+      title: "Change 'their' to 'there'",
+      apply: (t) => t.replace(/\btheir\b/gi, "there"),
+    },
+    {
+      id: "rewrite1",
+      type: "rewrite",
+      title: "Rewrite for clarity",
+      detail: "\“The report was read by me\” → \“I read the report\”",
+      apply: (t) => t.replace(/The report was read by me/gi, "I read the report"),
+    },
+  ];
+
+  const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
+
+  const words = useMemo(() => {
+    return text.trim() ? text.trim().split(/\s+/).length : 0;
+  }, [text]);
+  const chars = text.length;
+
+  function handleFix(id: string) {
+    const sug = suggestions.find((s) => s.id === id);
+    if (!sug) return;
+    const newText = sug.apply(text);
+    history.set(newText);
+    setDismissed((d) => ({ ...d, [id]: true }));
+  }
+
+  function handleDismiss(id: string) {
+    setDismissed((d) => ({ ...d, [id]: true }));
+  }
+
+  function buildPrompt(t: string) {
+    if (!t.trim()) return "";
+    return `Goal: Generate a dynamic prompt.\n\nInstructions:\n- Analyze the text and craft a clear, actionable prompt.\n- Keep it concise and specific.\n\nInput:\n${t}\n\nOutput:\nProvide a single improved prompt.`;
+  }
+
+  function generate() {
+    setGenerating(true);
+    const userPrompt = buildPrompt(text);
+
+    if (chromeAI.available) {
+      void (async () => {
+        const result = await chromeAI.generate(userPrompt);
+        if (result.ok) {
+          setOutput(result.text.trim());
+        } else {
+          // Fallback to local builder if Chrome AI errors
+          setOutput(userPrompt);
+        }
+        setGenerating(false);
+      })();
+    } else {
+      // Fallback for non-Chrome or when the on-device model isn't available
+      setOutput(userPrompt);
+      setGenerating(false);
+    }
+  }
+
+  async function copyOutput() {
+    if (!output) return;
+    try {
+      await navigator.clipboard.writeText(output);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      // noop
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground font-sans">
+      <Header />
+
+      <main className="px-8 pb-16">
+        <h1 className="text-2xl font-semibold mb-4">Generate dynamic prompts</h1>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <EditorPane
+            text={text}
+            onChange={history.set}
+            words={words}
+            chars={chars}
+            suggestions={suggestions}
+            dismissed={dismissed}
+            onFix={handleFix}
+            onDismiss={handleDismiss}
+            onUndo={history.undo}
+            onRedo={history.redo}
+            canUndo={history.canUndo}
+            canRedo={history.canRedo}
+            historyPast={history.past}
+            onRestore={(i) => history.restorePast(i)}
+            paneHeight={720}
+          />
+
+          <OutputPane
+            output={output}
+            copied={copied}
+            onCopy={copyOutput}
+            generating={generating}
+            onGenerate={generate}
+            aiAvailable={chromeAI.available}
+          />
         </div>
+        <div className="mt-4 text-xs text-right text-black/70 dark:text-white/70">English (US)</div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }

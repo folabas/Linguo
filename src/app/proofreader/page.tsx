@@ -17,7 +17,7 @@ export default function ProofreaderPage() {
 
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [statusNote, setStatusNote] = useState<string | null>(null);
+  const [statusNote, setStatusNote] = useState<string | null>('Enter text and click Generate to analyze.');
 
   function computeSuggestions(original: string, corrected: string): Suggestion[] {
     if (!original.trim() || original === corrected) return [];
@@ -61,6 +61,54 @@ export default function ProofreaderPage() {
     return items;
   }
 
+  function suggestionsFromCorrections(original: string, corrections: ChromeCorrection[]): Suggestion[] {
+    const items: Suggestion[] = [];
+  
+    for (let i = 0; i < corrections.length; i++) {
+      const c = corrections[i];
+      const start = c.startIndex ?? 0;
+      const end = c.endIndex ?? start;
+      const originalSegment = original.slice(start, end).trim();
+      const replacement = c.replacement?.trim() ?? "";
+      const issueType = (c.type ?? "grammar").toLowerCase();
+      const explanation = c.explanation?.trim();
+  
+      let title = "";
+      let detail: string | undefined;
+      let apply: (t: string) => string;
+  
+      if (originalSegment && replacement && originalSegment !== replacement) {
+        // Replace existing text
+        title = `Change “${originalSegment}” to “${replacement}”`;
+        apply = (t) => t.slice(0, start) + replacement + t.slice(end);
+      } else if (originalSegment && !replacement) {
+        // Remove text
+        title = `Remove “${originalSegment}”`;
+        apply = (t) => t.slice(0, start) + t.slice(end);
+      } else if (!originalSegment && replacement) {
+        // Add new text
+        title = `Add “${replacement}”`;
+        apply = (t) => t.slice(0, start) + replacement + t.slice(start);
+      } else {
+        // Fallback (e.g., same text)
+        title = `Review “${originalSegment || replacement}”`;
+        apply = (t) => t;
+      }
+  
+      if (explanation) detail = explanation;
+  
+      items.push({
+        id: `corr-${start}-${end}-${i}`,
+        type: issueType === "rewrite" ? "rewrite" : "grammar",
+        title,
+        detail,
+        apply,
+      });
+    }
+  
+    return items;
+  }
+
   const words = useMemo(() => (text.trim() ? text.trim().split(/\s+/).length : 0), [text]);
   const chars = text.length;
 
@@ -69,6 +117,19 @@ export default function ProofreaderPage() {
   );
 
   // Prefer the dedicated Proofreader API when present; fall back to Prompt API
+  // Align correction shape with chrome-ai.d.ts ProofreadCorrection
+  type ChromeCorrection = {
+    startIndex?: number;
+    endIndex?: number;
+    replacement?: string;
+    type?: string;
+    explanation?: string;
+  };
+
+  type ProofreaderSession =
+    | { proofreadText: (input: string) => Promise<{ corrected?: string; corrections: ChromeCorrection[] | null }>; ready?: Promise<void> }
+    | { proofread: (input: string) => Promise<{ corrected: string; corrections: ChromeCorrection[] | null }>; ready?: Promise<void> };
+
   type ProofreaderProvider = {
     availability: (options?: { includeCorrectionTypes?: boolean; expectedInputLanguages?: string[] }) => Promise<string>;
     create: (options?: {
@@ -77,8 +138,49 @@ export default function ProofreaderPage() {
       expectedInputLanguages?: string[];
       monitor?: (m: EventTarget) => void;
       signal?: AbortSignal;
-    }) => Promise<{ proofread: (input: string) => Promise<{ corrected: string; corrections: unknown[] | null }>; ready?: Promise<void> }>;
+    }) => Promise<ProofreaderSession>;
   };
+
+  function hasProofreadText(session: ProofreaderSession | null): session is { proofreadText: (input: string) => Promise<{ corrected?: string; corrections: ChromeCorrection[] | null }>; ready?: Promise<void> } {
+    return !!session && 'proofreadText' in session;
+  }
+
+  function hasProofread(session: ProofreaderSession | null): session is { proofread: (input: string) => Promise<{ corrected: string; corrections: ChromeCorrection[] | null }>; ready?: Promise<void> } {
+    return !!session && 'proofread' in session;
+  }
+
+  // Debug helper to log proofreader results in the browser console
+  function debugLogProofread(
+    context: string,
+    payload: { corrected?: string; corrections?: ChromeCorrection[] | null; suggestions?: Suggestion[] }
+  ) {
+    if (typeof window === 'undefined') return;
+    try {
+      // Group logs for readability
+      console.group(`Proofreader: ${context}`);
+      if (payload.corrected !== undefined) {
+        console.log('corrected:', payload.corrected);
+      }
+      if (payload.corrections) {
+        const rows = (payload.corrections ?? []).map((c, i) => ({
+          i,
+          startIndex: c.startIndex,
+          endIndex: c.endIndex,
+          replacement: c.replacement,
+          type: c.type ?? '',
+          explanation: c.explanation ?? '',
+        }));
+        console.table(rows);
+      }
+      if (payload.suggestions) {
+        const sugRows = payload.suggestions.map((s, i) => ({ i, id: s.id, type: s.type, title: s.title }));
+        console.table(sugRows);
+      }
+      console.groupEnd();
+    } catch (e) {
+      console.log('debugLogProofread error', e);
+    }
+  }
 
   function getProofreaderProvider(): ProofreaderProvider | null {
     const g = globalThis as { Proofreader?: ProofreaderProvider };
@@ -101,7 +203,7 @@ export default function ProofreaderPage() {
   const aiAvailableFlag = !!getProofreaderProvider() || chromeAI.available;
 
   // Manage proofreader lifecycle and progress
-  const proofreaderRef = useRef<null | { proofread: (input: string) => Promise<{ corrected: string; corrections: unknown[] | null }>; ready?: Promise<void> }>(null);
+  const proofreaderRef = useRef<ProofreaderSession | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
   const lastProgressRef = useRef<number>(0);
 
@@ -123,10 +225,11 @@ export default function ProofreaderPage() {
 
     const provider = getProofreaderProvider();
     const trimmed = text.trim();
+    const originalText = text;
     if (!trimmed) {
       setSuggestions([]);
       setDismissed({});
-      setStatusNote('Enter text to analyze.');
+      setStatusNote('Please enter some text to analyze.');
       setIsAnalyzing(false);
       return;
     }
@@ -134,7 +237,7 @@ export default function ProofreaderPage() {
     // Try dedicated Proofreader first
     if (provider) {
       try {
-        const statusRaw = await provider.availability({ includeCorrectionTypes: false, expectedInputLanguages: ["en"] });
+        const statusRaw = await provider.availability({ includeCorrectionTypes: true, expectedInputLanguages: ["en"] });
         const status = normalizeAvailability(statusRaw);
         setStatusNote(status === 'after-download' ? 'Downloading Proofreader model…' : 'Using Proofreader AI.');
 
@@ -145,9 +248,10 @@ export default function ProofreaderPage() {
           lastProgressRef.current = 0;
 
           const proofreader = await provider.create({
-            includeCorrectionTypes: false,
+            includeCorrectionTypes: true,
+            includeCorrectionExplanation: true,
             expectedInputLanguages: ["en"],
-            signal: controllerRef.current.signal,
+            signal: controllerRef.current?.signal as AbortSignal,
             monitor(m) {
               m.addEventListener?.("downloadprogress", (e: Event & { loaded?: number }) => {
                 const loaded = (e as unknown as { loaded?: number }).loaded;
@@ -161,29 +265,39 @@ export default function ProofreaderPage() {
             },
           });
 
-          proofreaderRef.current = proofreader;
+          proofreaderRef.current = proofreader as ProofreaderSession;
         }
 
-        // If a download is required, wait for readiness with a timeout protection
-        if (status === 'after-download' && proofreaderRef.current?.ready) {
-          const timeoutMs = 25000;
-          const readyOrTimeout = await Promise.race([
-            proofreaderRef.current.ready,
-            new Promise((resolve) => setTimeout(resolve, timeoutMs)),
-          ]);
-          if (readyOrTimeout === undefined && lastProgressRef.current === 0) {
-            // Timed out and still 0% — abort and fall back
-            controllerRef.current?.abort();
-            throw new Error('Proofreader download timed out at 0%');
-          }
+        // If a download is required, await readiness if available
+        if (status === 'after-download' && proofreaderRef.current && 'ready' in proofreaderRef.current && proofreaderRef.current.ready) {
+          await proofreaderRef.current.ready;
         }
 
-        const result = await proofreaderRef.current!.proofread(trimmed);
-        const corrected = result.corrected?.trim() ?? trimmed;
-        const items = computeSuggestions(trimmed, corrected);
-        setSuggestions(items);
-        setDismissed({});
-        setStatusNote(items.length > 0 ? `Generated ${items.length} suggestion${items.length > 1 ? 's' : ''}.` : 'No changes found.');
+        // Call proofreadText when available, else fall back to proofread
+        let result: { corrected?: string; corrections: ChromeCorrection[] | null };
+        if (hasProofreadText(proofreaderRef.current)) {
+          result = await proofreaderRef.current.proofreadText(originalText);
+        } else if (hasProofread(proofreaderRef.current)) {
+          result = await proofreaderRef.current.proofread(originalText);
+        } else {
+          throw new Error('Proofreader session missing methods');
+        }
+
+        const corrections = result.corrections ?? [];
+        if (corrections.length > 0) {
+          const items = suggestionsFromCorrections(originalText, corrections);
+          debugLogProofread('analyzeText: structured corrections', { corrections, suggestions: items });
+          setSuggestions(items);
+          setDismissed({});
+          setStatusNote(`Generated ${items.length} suggestion${items.length > 1 ? 's' : ''}.`);
+        } else {
+          const corrected = (result.corrected ?? originalText).trim();
+          const items = computeSuggestions(originalText, corrected);
+          debugLogProofread('analyzeText: corrected string', { corrected, suggestions: items });
+          setSuggestions(items);
+          setDismissed({});
+          setStatusNote(items.length > 0 ? `Generated ${items.length} suggestion${items.length > 1 ? 's' : ''}.` : 'No changes found.');
+        }
         setIsAnalyzing(false);
         return;
       } catch (err) {
@@ -199,7 +313,7 @@ export default function ProofreaderPage() {
       const result = await chromeAI.generate(prompt);
       if (result.ok) {
         const corrected = result.text.trim();
-        const items = computeSuggestions(trimmed, corrected);
+        const items = computeSuggestions(originalText, corrected);
         setSuggestions(items);
         setDismissed({});
         setStatusNote(items.length > 0 ? `Generated ${items.length} suggestion${items.length > 1 ? 's' : ''}.` : 'No changes found.');
@@ -217,24 +331,15 @@ export default function ProofreaderPage() {
     setIsAnalyzing(false);
   }
 
-  // Auto-generate suggestions with debounce on text changes
+  // Clear suggestions when text is empty
   useEffect(() => {
     const trimmed = text.trim();
     if (!trimmed) {
       setSuggestions([]);
       setDismissed({});
-      setStatusNote('Enter text to analyze.');
-      return;
+      setStatusNote('Enter text and click Generate to analyze.');
     }
-
-    const t = setTimeout(() => {
-      if (!isAnalyzing) {
-        analyzeText();
-      }
-    }, 600);
-
-    return () => clearTimeout(t);
-  }, [text, isAnalyzing]);
+  }, [text]);
 
   function buildProofreadPrompt(t: string) {
     const trimmed = t.trim();
@@ -242,38 +347,85 @@ export default function ProofreaderPage() {
     return `Task: Proofread and correct the text.\n\nInstructions:\n- Correct grammar, spelling, and punctuation.\n- Keep the meaning and formatting.\n- Return only the corrected text without explanations.\n\nText:\n${trimmed}`;
   }
 
+  function applyAllCorrections(original: string, corrections: ChromeCorrection[]): string {
+    // Apply in order of startIndex to maintain positions
+    const sorted = [...corrections].sort((a, b) => (a.startIndex ?? 0) - (b.startIndex ?? 0));
+    let result = "";
+    let cursor = 0;
+    for (const c of sorted) {
+      const start = c.startIndex ?? cursor;
+      const end = c.endIndex ?? start;
+      const originalSegment = original.slice(start, end);
+      const replacement = c.replacement ?? originalSegment;
+      result += original.slice(cursor, start) + replacement;
+      cursor = end;
+    }
+    result += original.slice(cursor);
+    return result;
+  }
+
   async function fixAll() {
     const provider = getProofreaderProvider();
     const trimmed = text.trim();
+    const originalText = text;
 
     // Prefer the dedicated Proofreader API when available
     if (provider && trimmed) {
       try {
-        const statusRaw = await provider.availability({ includeCorrectionTypes: false, expectedInputLanguages: ["en"] });
+        const statusRaw = await provider.availability({ includeCorrectionTypes: true, expectedInputLanguages: ["en"] });
         const status = normalizeAvailability(statusRaw);
 
-        const proofreader = await provider.create({
-          includeCorrectionTypes: false,
-          expectedInputLanguages: ["en"],
-          monitor(m) {
-            m.addEventListener?.("downloadprogress", (e: Event & { loaded?: number }) => {
-              const loaded = (e as unknown as { loaded?: number }).loaded;
-              if (typeof loaded === "number") {
-                const pct = Math.round(loaded * 100);
-                console.log(`Downloaded ${pct}%`);
-              }
-            });
-          },
-        });
+        // Reuse proofreader session when available; otherwise create with monitoring and abort support
+        if (!proofreaderRef.current) {
+          controllerRef.current?.abort();
+          controllerRef.current = new AbortController();
 
-        if (status === "after-download" && proofreader.ready) {
-          await proofreader.ready;
+          const proofreader = await provider.create({
+            includeCorrectionTypes: true,
+            includeCorrectionExplanation: true,
+            expectedInputLanguages: ["en"],
+            signal: controllerRef.current?.signal as AbortSignal,
+            monitor(m) {
+              m.addEventListener?.("downloadprogress", (e: Event & { loaded?: number }) => {
+                const loaded = (e as unknown as { loaded?: number }).loaded;
+                if (typeof loaded === "number") {
+                  const pct = Math.round(loaded * 100);
+                  console.log(`Downloaded ${pct}%`);
+                }
+              });
+            },
+          });
+
+          proofreaderRef.current = proofreader as ProofreaderSession;
         }
 
-        const result = await proofreader.proofread(trimmed);
-        const corrected = result.corrected?.trim();
-        if (corrected && corrected !== text) {
-          history.set(corrected);
+        if (status === "after-download" && proofreaderRef.current && "ready" in proofreaderRef.current && proofreaderRef.current.ready) {
+          await proofreaderRef.current.ready;
+        }
+
+        // Use proofreadText when available, else fall back to proofread
+        let result: { corrected?: string; corrections: ChromeCorrection[] | null };
+        if (hasProofreadText(proofreaderRef.current)) {
+          result = await proofreaderRef.current.proofreadText(originalText);
+        } else if (hasProofread(proofreaderRef.current)) {
+          result = await proofreaderRef.current.proofread(originalText);
+        } else {
+          throw new Error('Proofreader session missing methods');
+        }
+
+        const corrections = result.corrections ?? [];
+        if (corrections.length > 0) {
+          const correctedAll = applyAllCorrections(originalText, corrections);
+          debugLogProofread('fixAll: applied structured corrections', { corrections, corrected: correctedAll });
+          if (correctedAll && correctedAll !== text) {
+            history.set(correctedAll);
+          }
+        } else {
+          const corrected = result.corrected?.trim();
+          debugLogProofread('fixAll: corrected string', { corrected });
+          if (corrected && corrected !== text) {
+            history.set(corrected);
+          }
         }
         // Dismiss all suggestions since global correction has been applied
         setDismissed((d) => {
@@ -331,7 +483,6 @@ export default function ProofreaderPage() {
         <h1 className="text-2xl font-semibold mb-4">Correct grammar &amp; writing</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left: editor */}
           <EditorPane
             text={text}
             onChange={history.set}
@@ -352,7 +503,6 @@ export default function ProofreaderPage() {
             placeholder="Paste your text here or upload a document"
           />
 
-          {/* Right: suggestions/history and Fix All button */}
           <div className="flex flex-col min-h-[720px]">
             <SuggestionsHistoryTabs
               suggestions={suggestions}

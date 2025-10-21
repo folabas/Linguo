@@ -34,30 +34,6 @@ export default function EditorToolbar({
       </div>
 
       <div className="flex items-center gap-2 rounded-[8px] border border-[#A5A5A5]/20 px-2 py-1">
-        {/* <button
-          title="Style"
-          onClick={() => setActiveTool((prev) => (prev === "style" ? null : "style"))}
-          aria-pressed={activeTool === "style"}
-          className={`px-2 py-1 rounded cursor-pointer ${activeTool === "style" ? "bg-black/[.05]" : "hover:bg-black/[.05]"}`}
-        >
-          <Image src="/bold.svg" alt="Language icon" width={14} height={14} />
-        </button> */}
-        {/* <button
-          title="Tone"
-          onClick={() => setActiveTool((prev) => (prev === "tone" ? null : "tone"))}
-          aria-pressed={activeTool === "tone"}
-          className={`px-2 py-1 rounded cursor-pointer ${activeTool === "tone" ? "bg-black/[.05]" : "hover:bg-black/[.05]"}`}
-        >
-          <Image src="/pencil.svg" alt="Tone icon" width={14} height={14} />
-        </button> */}
-        {/* <button
-          title="Language"
-          onClick={() => setActiveTool((prev) => (prev === "language" ? null : "language"))}
-          aria-pressed={activeTool === "language"}
-          className={`px-2 py-1 rounded cursor-pointer ${activeTool === "language" ? "bg-black/[.05]" : "hover:bg-black/[.05]"}`}
-        >
-          <Image src="/lang.svg" alt="Language icon" width={14} height={14} />
-        </button> */}
         <button
           title="Attach"
           onClick={() => {

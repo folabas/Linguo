@@ -87,7 +87,6 @@ export default function Home() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch {
-      // noop
     }
   }
 

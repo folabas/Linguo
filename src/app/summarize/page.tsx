@@ -101,7 +101,6 @@ Input:\n${t}`;
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch {
-      // noop
     }
   }
 
@@ -115,7 +114,6 @@ Input:\n${t}`;
         <h1 className="text-2xl font-semibold mb-4">Summarize your text &amp; writing</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left: editor */}
           <EditorPane
             text={text}
             onChange={history.set}
@@ -136,7 +134,6 @@ Input:\n${t}`;
             placeholder="Paste your text here or upload a document"
           />
 
-          {/* Right: output */}
           <OutputPane
             output={output}
             copied={copied}

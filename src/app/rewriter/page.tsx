@@ -70,10 +70,8 @@ export default function RewriterPage() {
             monitor: (m: EventTarget) => {
               try {
                 m.addEventListener("downloadprogress", () => {
-                  // no-op
                 });
               } catch {
-                // noop
               }
             },
           });
@@ -135,7 +133,6 @@ export default function RewriterPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch {
-      // noop
     }
   }
 
@@ -147,7 +144,6 @@ export default function RewriterPage() {
         <h1 className="text-2xl font-semibold mb-4">Improve content with alternative options</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left: editor */}
           <EditorPane
             text={text}
             onChange={history.set}
@@ -168,7 +164,6 @@ export default function RewriterPage() {
             placeholder="Paste text to rewrite..."
           />
 
-          {/* Right: output */}
           <OutputPane
             output={output}
             copied={copied}

@@ -1,7 +1,5 @@
 "use client";
 
-// (useState removed)
-// (Image removed)
 import type { Suggestion } from "@/components/types";
 import { HelixLoader } from "@/components/Loader";
 import { useAttach } from "@/features/attach/useAttach";
@@ -65,10 +63,8 @@ export default function EditorPane({
           placeholder={placeholder}
           className="w-full h-full p-5 bg-transparent outline-none resize-none font-sans"
         />
-        {/* moved toolbar outside */}
       </div>
 
-      {/* Toolbar */}
       <EditorToolbar
         words={words}
         chars={chars}

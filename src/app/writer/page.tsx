@@ -76,10 +76,8 @@ export default function WriterPage() {
             monitor: (m: EventTarget) => {
               try {
                 m.addEventListener("downloadprogress", () => {
-                  // no-op
                 });
               } catch {
-                // noop
               }
             },
           });
@@ -145,7 +143,6 @@ export default function WriterPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch {
-      // noop
     }
   }
 
@@ -157,7 +154,6 @@ export default function WriterPage() {
         <h1 className="text-2xl font-semibold mb-4">Create original &amp; engaging text</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left: editor */}
           <EditorPane
             text={text}
             onChange={history.set}
@@ -178,7 +174,6 @@ export default function WriterPage() {
             placeholder="Describe your idea, brief, or theme..."
           />
 
-          {/* Right: output */}
           <OutputPane
             output={output}
             copied={copied}

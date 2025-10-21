@@ -18,7 +18,6 @@ export default function TranslatorPage() {
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Language selectors
   const [sourceLang, setSourceLang] = useState("English (US)");
   const [targetLang, setTargetLang] = useState("Spanish");
 
@@ -146,7 +145,6 @@ ${t}`;
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch {
-      // noop
     }
   }
 
@@ -179,9 +177,7 @@ ${t}`;
       <main className="px-8 pb-16">
         <h1 className="text-2xl font-semibold mb-4">Translate text &amp; writing</h1>
 
-        {/* Language selectors row aligned with panes */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative">
-          {/* Left column: source language + editor */}
           <div className="flex flex-col gap-2">
             <div className="flex justify-start">
               <select
@@ -215,7 +211,6 @@ ${t}`;
             />
           </div>
 
-          {/* Right column: target language + output */}
           <div className="flex flex-col gap-2">
             <div className="flex justify-end">
               <select
@@ -242,7 +237,6 @@ ${t}`;
             />
           </div>
 
-          {/* Center swap button */}
           <button
             onClick={swapLanguages}
             title="Swap languages"

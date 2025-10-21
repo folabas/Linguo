@@ -28,12 +28,10 @@ export default function Header() {
 
   return (
     <header className="flex items-center px-8 py-6 gap-6">
-      {/* Left: brand */}
       <div className="flex items-center gap-3">
         <Image src="/Logo.svg" alt="Linguo logo" width={100} height={100} />
       </div>
 
-      {/* Center: tabs */}
       <ul className="flex-1 flex justify-center gap-2 text-[15px]">
         {tabs.map(({ label, href }) => (
           <li key={label} className="flex">
@@ -61,7 +59,6 @@ export default function Header() {
         ))}
       </ul>
 
-      {/* Right: avatar */}
       <div className="h-9 w-9 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 grid place-items-center text-white font-semibold">
         L
       </div>

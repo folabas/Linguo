@@ -12,6 +12,7 @@ type Props = {
   onRestore?: (index: number) => void;
   activeTab?: 'suggestions' | 'history';
   onTabChange?: (tab: 'suggestions' | 'history') => void;
+  emptySuggestionsMessage?: string;
 };
 
 export default function SuggestionsHistoryTabs({
@@ -23,6 +24,7 @@ export default function SuggestionsHistoryTabs({
   onRestore,
   activeTab,
   onTabChange,
+  emptySuggestionsMessage,
 }: Props) {
   const [internalTab, setInternalTab] = useState<'suggestions' | 'history'>('suggestions');
   const currentTab = activeTab ?? internalTab;
@@ -48,15 +50,15 @@ export default function SuggestionsHistoryTabs({
       </div>
 
       {currentTab === 'history' && (
-        <div className="mt-2 rounded-xl border border-black/[.08] dark:border-white/[.145] p-2">
+        <div className="mt-2 rounded-xl border border-black/[.08] dark:border-white/[.145] p-2 max-h-56 overflow-y-auto">
           {historyPast.length === 0 ? (
             <div className="text-xs text-[#A5A5A5]">No history yet</div>
           ) : (
             <div className="space-y-1">
               {historyPast.map((entry, i) => (
                 <div key={i} className="flex items-center justify-between gap-3 py-1">
-                  <div className="text-xs text-[#333] dark:text-[#CCC] truncate max-w-[60%]">
-                    {entry ? entry.slice(0, 80) : "(empty)"}
+                  <div className="text-xs text-[#333] dark:text-[#CCC] truncate max-w-[60%]" title={entry ?? "(empty)"}>
+                    {entry ? (entry.length > 80 ? entry.slice(0, 80) + "…" : entry) : "(empty)"}
                   </div>
                   <button
                     onClick={() => onRestore?.(i)}
@@ -72,11 +74,11 @@ export default function SuggestionsHistoryTabs({
       )}
 
       {currentTab === 'suggestions' && (
-        <div className="mt-3 space-y-3">
+        <div className="mt-3 space-y-3 max-h-64 overflow-y-auto pr-1">
           {suggestions.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <div className="text-lg font-medium mb-2">No suggestions yet</div>
-              <div className="text-sm">Click &quot;Generate Suggestions&quot; to analyze your text</div>
+              <div className="text-sm">{emptySuggestionsMessage ?? 'Click "Generate Suggestions" to analyze your text'}</div>
             </div>
           ) : (
             suggestions.map((s) =>
@@ -118,7 +120,7 @@ export default function SuggestionsHistoryTabs({
                       })()
                     )}
                     {s.detail && (
-                      <div className="mt-3 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+                      <div className="mt-3 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 max-h-32 overflow-y-auto">
                         <div className="text-sm font-medium text-emerald-800 dark:text-emerald-200 mb-1">
                           Suggested correction:
                         </div>

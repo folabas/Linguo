@@ -23,9 +23,10 @@ function getSummarizer(): SummarizerProvider | null {
   return null;
 }
 
-function buildSummarizePrompt(t: string) {
+function buildSummarizePrompt(t: string, instruction?: string) {
   if (!t.trim()) return "";
-  return `Task: Summarize the following text.\n\nInstructions:\n- Capture main ideas and key details.\n- Be concise and clear.\n- Do not include commentary.\n- Return only the summary.\n\nInput:\n${t}`;
+  const refineBlock = instruction?.trim() ? `\n\nRefinement:\n${instruction.trim()}` : "";
+  return `Task: Summarize the following text.\n\nInstructions:\n- Capture main ideas and key details.\n- Be concise and clear.\n- Do not include commentary.${refineBlock}\n\nInput:\n${t}`;
 }
 
 export function useSummarize() {
@@ -42,7 +43,7 @@ export function useSummarize() {
     "You are a precise summarization assistant. Provide a concise, clear summary capturing key points and structure. Return only the summary without commentary."
   );
 
-  async function summarize() {
+  async function summarize(instruction?: string) {
     setGenerating(true);
 
     const summarizerProvider = getSummarizer();
@@ -60,7 +61,7 @@ export function useSummarize() {
           await summarizer.ready;
         }
         const result = await summarizer.summarize(text, {
-          context: 'This article is intended for a tech-savvy audience.',
+          context: instruction?.trim() ? instruction.trim() : 'This article is intended for a tech-savvy audience.',
         });
         setOutput(result.trim());
         summarizer.destroy?.();
@@ -71,7 +72,7 @@ export function useSummarize() {
       }
     }
 
-    const prompt = buildSummarizePrompt(text);
+    const prompt = buildSummarizePrompt(text, instruction);
     if (chromeAI.available) {
       const result = await chromeAI.generate(prompt);
       if (result.ok) {

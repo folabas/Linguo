@@ -24,6 +24,7 @@ type Props = {
   showTabs?: boolean;
   paneHeight?: number;
   placeholder?: string;
+  emptySuggestionsMessage?: string;
 };
 
 export default function EditorPane({
@@ -44,6 +45,7 @@ export default function EditorPane({
   showTabs = true,
   paneHeight = 420,
   placeholder = "Start writing here...",
+  emptySuggestionsMessage,
 }: Props) {
   const { openPicker, loading, error } = useAttach((extracted) => {
     const prefix = text ? "\n\n" : "";
@@ -84,6 +86,7 @@ export default function EditorPane({
           onDismiss={onDismiss}
           historyPast={historyPast}
           onRestore={onRestore}
+          emptySuggestionsMessage={emptySuggestionsMessage}
         />
       )}
     </section>

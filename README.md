@@ -194,3 +194,27 @@ Note: API availability may depend on Early Preview status and Chrome version. Jo
 ## Acknowledgments
 - Google Chrome Built‑in AI team and Gemini Nano.
 - Community contributors exploring client‑side AI and privacy‑first experiences.
+
+---
+
+## Usage Instructions
+
+To use Linguo, open the application in Google Chrome on a build that supports Built‑in AI (recent Canary or Dev versions work best). If you’re running locally, install dependencies and start the development server, then visit `http://localhost:3001/` in Chrome. If the app is deployed (for example on Vercel), simply open your site URL in Chrome. The app will show a message if the on‑device AI model is not yet available on your browser, but the interface remains usable.
+
+Begin on the Prompt page. Type your idea or task into the input and click Generate to produce a concise, actionable prompt tailored to your needs. Use Regenerate if you want alternative phrasing, and copy the resulting prompt from the output panel for use elsewhere.
+
+For grammar and style improvements, go to the Proofreader page. Paste text directly or attach a document, then click Generate Suggestions (AI). The app presents issues with short explanations and offers precise fixes. Apply changes one by one or choose Fix All to update everything at once. Your corrected content appears in the output panel and is saved in the session history so you can retrace changes.
+
+To condense long material, visit the Summarize page. Paste an article, report, or imported document, and click Summarize (AI). Linguo produces a compact, readable summary that captures the key points, ready to be copied or shared.
+
+For multilingual work, open the Translator page. Paste your source text, select the target language, and click Translate (AI). The translated output displays immediately and can be copied into your workflow or refined further with the Rewriter.
+
+When you need a fresh draft, use the Writer page. Enter a topic or short brief and click Write (AI) to generate an initial version. If you want variations, regenerate for alternative takes and iterate until you’re satisfied.
+
+To improve clarity, tone, or phrasing without changing meaning, switch to the Rewriter page. Paste the text you want refined and click Rewrite (AI). Review the alternatives and choose the version that best fits your voice or audience before copying it out.
+
+At any time, you can attach `.docx` or `.pdf` files using the clip icon in the editor toolbar. The document’s text is loaded into the editor, where you can proofread, translate, summarize, write, or rewrite it as needed. Imported content flows seamlessly between tools: for instance, you can proofread a section, then summarize the result, and finally rewrite a paragraph for tone.
+
+Linguo is resilient to connectivity issues. Once Chrome’s Built‑in AI model has been downloaded and configured on your device, the core AI features continue to work even when the internet connection is weak or unavailable. If the model isn’t ready yet or your browser doesn’t support the APIs, the app will inform you and you can still use the interface and non‑AI functions while you prepare your environment.
+
+For the smoothest experience, keep Chrome up to date and allow the browser time to complete the one‑time on‑device model setup the first time you use AI features. If something seems off, refresh the page and try again—availability can vary by device and build. You can freely move between tools and reuse output across pages, building a simple, private, end‑to‑end workflow for everyday writing tasks.

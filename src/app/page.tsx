@@ -28,7 +28,7 @@ export default function Home() {
   const [hasGeneratedOnce, setHasGeneratedOnce] = useState(false);
   const [regenCount, setRegenCount] = useState(0); // counts only regenerations
   const regenLimit = 5;
-  const systemPrompt = "You are a concise prompt-crafting assistant. Rewrite the input into a single, clear, actionable prompt without extra commentary.";
+  const systemPrompt = "You are a concise prompt-crafting assistant. Rewrite the input into clear, actionable prompts. If the input contains multiple questions or tasks, produce a numbered list of individually improved prompts, one per item, with no extra commentary.";
   const chromeAI = useChromeAI(systemPrompt);
 
   // Auto-run proofreader whenever the text changes (debounced)
@@ -46,7 +46,7 @@ export default function Home() {
     const refineBlock = instruction?.trim()
       ? `\n\nRefinement:\n${instruction.trim()}`
       : "";
-    return `Goal: Generate a dynamic prompt.\n\nInstructions:\n- Analyze the text and craft a clear, actionable prompt.\n- Keep it concise and specific.${refineBlock}\n\nInput:\n${t}\n\nOutput:\nProvide a single improved prompt.`;
+    return `Goal: Generate improved prompts.\n\nInstructions:\n- Identify distinct questions or tasks in the input.\n- For multiple items, return a numbered list with one improved prompt per item.\n- Keep each prompt concise, specific, and actionable.\n- Do not add explanations or extra commentary.${refineBlock}\n\nInput:\n${t}\n\nOutput:\nReturn the improved prompt(s) as a numbered list when applicable.`;
   }
 
   async function handleGenerateOrRegenerate() {

@@ -52,10 +52,20 @@ export async function parseFile(file: File): Promise<string> {
 export async function parsePdf(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
   const pdfjsLib = (await import("pdfjs-dist")) as unknown as PdfjsLib;
-  // Use a CDN worker to avoid bundling config complexity
-  if (pdfjsLib.GlobalWorkerOptions) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  // Prefer local worker for offline use; fallback to CDN if not present
+  if (pdfjsLib.GlobalWorkerOptions && typeof window !== "undefined") {
+    try {
+      const res = await fetch("/pdf.worker.min.js", { method: "HEAD" });
+      if (res.ok) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
+      } else {
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      }
+    } catch {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
   }
 
   const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });

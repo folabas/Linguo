@@ -36,7 +36,9 @@ export default function TranslatorPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative">
           <div className="flex flex-col gap-2">
             <div className="flex justify-start">
+              <label htmlFor="source-lang" className="sr-only">Source language</label>
               <select
+                id="source-lang"
                 value={sourceLang}
                 onChange={(e) => setSourceLang(e.target.value)}
                 className="text-[12px] font-[500] px-3 py-1 rounded-[14px] border border-black/[.08] dark:border-white/[.145] bg-white text-black"
@@ -69,7 +71,9 @@ export default function TranslatorPage() {
 
           <div className="flex flex-col gap-2">
             <div className="flex justify-end">
+              <label htmlFor="target-lang" className="sr-only">Target language</label>
               <select
+                id="target-lang"
                 value={targetLang}
                 onChange={(e) => setTargetLang(e.target.value)}
                 className="text-[12px] font-[500] px-3 py-1 rounded-[14px] border border-black/[.08] dark:border-white/[.145] bg-white text-black"

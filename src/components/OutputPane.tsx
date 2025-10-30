@@ -64,6 +64,7 @@ export default function OutputPane({
         <div className="inline-flex items-center gap-2">
           {showEditButton && (
             <button
+              type="button"
               onClick={onEditInEditor}
               className={`text-[14px] px-3 py-1 rounded bg-white text-black border border-transparent inline-flex items-center gap-2 cursor-pointer`}
             >
@@ -72,6 +73,7 @@ export default function OutputPane({
             </button>
           )}
           <button
+            type="button"
             onClick={onCopy}
             className={`text-[14px] px-3 py-1 rounded bg-white text-black border border-transparent inline-flex items-center gap-2 cursor-pointer ${copied ? "opacity-70" : ""}`}
           >
@@ -80,7 +82,7 @@ export default function OutputPane({
           </button>
         </div>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto p-5 font-sans whitespace-pre-wrap relative">
+      <div className="flex-1 min-h-0 overflow-y-auto p-5 font-sans whitespace-pre-wrap relative" role="status" aria-live="polite" aria-atomic="true">
         {output || placeholder || ""}
         {showProgress && (
           <div className={`absolute bottom-2 right-2 text-xs ${progressDanger ? "text-red-400" : "text-emerald-200/80"} bg-black/20 px-2 py-1 rounded`}>
@@ -101,6 +103,7 @@ export default function OutputPane({
           </div>
         )}
         <button
+          type="button"
           onClick={onGenerate}
           disabled={isDisabled}
           className={`w-full h-10 rounded font-medium text-black ${isDisabled ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}`}

@@ -28,7 +28,7 @@ export function useAttach(onAppend: (text: string) => void) {
       if (!file) return;
 
       setError(null);
-      const maxSizeBytes = 50 * 1024 * 1024;
+      const maxSizeBytes = 10 * 1024 * 1024;
       if (file.size > maxSizeBytes) {
         setError("File too large. Please choose a file under 10MB.");
         scheduleAutoClear();

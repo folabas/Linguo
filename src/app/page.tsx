@@ -32,14 +32,18 @@ export default function Home() {
   const chromeAI = useChromeAI(systemPrompt);
 
   // Auto-run proofreader whenever the text changes (debounced)
+  const [autoAnalyze, setAutoAnalyze] = useState(true);
   useEffect(() => {
     const trimmed = text.trim();
     if (!trimmed) return;
+    if (!autoAnalyze) return;
+    const len = trimmed.length;
+    const delay = len > 5000 ? 1000 : len > 2000 ? 700 : 350;
     const timer = setTimeout(() => {
       void analyzeText();
-    }, 350);
+    }, delay);
     return () => clearTimeout(timer);
-  }, [text, analyzeText]);
+  }, [text, analyzeText, autoAnalyze]);
 
   function buildPrompt(t: string, instruction?: string) {
     if (!t.trim()) return "";
@@ -98,7 +102,20 @@ export default function Home() {
       <Header />
 
       <main className="px-8 pb-16">
-        <h1 className="text-2xl font-semibold mb-4">Generate dynamic prompts</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-semibold">Generate dynamic prompts</h1>
+          <label className="flex items-center gap-2 text-sm" htmlFor="auto-analyze">
+            <input
+              id="auto-analyze"
+              type="checkbox"
+              checked={autoAnalyze}
+              onChange={(e) => setAutoAnalyze(e.target.checked)}
+              aria-label="Auto analyze while typing"
+              className="cursor-pointer"
+            />
+            Auto analyze while typing
+          </label>
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <EditorPane
             text={text}
